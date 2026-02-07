@@ -6,8 +6,23 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		37D8D5562F37A2E70021F339 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5542F37A2E70021F339 /* ContentView.swift */; };
+		37D8D5572F37A2E70021F339 /* Unity_PumpApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D54F2F37A2E70021F339 /* Unity_PumpApp.swift */; };
+		37D8D55C2F37A3830021F339 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D55B2F37A37E0021F339 /* AppModel.swift */; };
+		37D8D55D2F37A4380021F339 /* GlucosePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5582F37A3280021F339 /* GlucosePoint.swift */; };
+		37D8D55E2F37A4400021F339 /* PumpEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5592F37A33E0021F339 /* PumpEvent.swift */; };
+		37D8D55F2F37A4490021F339 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D55A2F37A3660021F339 /* MockDataGenerator.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		37603F192F368B21003BDE06 /* Unity Pump.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Unity Pump.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		37D8D54F2F37A2E70021F339 /* Unity_PumpApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Unity_PumpApp.swift; sourceTree = "<group>"; };
+		37D8D5542F37A2E70021F339 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		37D8D5582F37A3280021F339 /* GlucosePoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucosePoint.swift; sourceTree = "<group>"; };
+		37D8D5592F37A33E0021F339 /* PumpEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpEvent.swift; sourceTree = "<group>"; };
+		37D8D55A2F37A3660021F339 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
+		37D8D55B2F37A37E0021F339 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +47,11 @@
 		37603F102F368B21003BDE06 = {
 			isa = PBXGroup;
 			children = (
+				37D8D5502F37A2E70021F339 /* App */,
+				37D8D5512F37A2E70021F339 /* Components */,
+				37D8D5522F37A2E70021F339 /* Mock */,
+				37D8D5532F37A2E70021F339 /* Models */,
+				37D8D5552F37A2E70021F339 /* Views */,
 				37603F1B2F368B21003BDE06 /* Unity Pump */,
 				37603F1A2F368B21003BDE06 /* Products */,
 			);
@@ -43,6 +63,47 @@
 				37603F192F368B21003BDE06 /* Unity Pump.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		37D8D5502F37A2E70021F339 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				37D8D55B2F37A37E0021F339 /* AppModel.swift */,
+				37D8D54F2F37A2E70021F339 /* Unity_PumpApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		37D8D5512F37A2E70021F339 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		37D8D5522F37A2E70021F339 /* Mock */ = {
+			isa = PBXGroup;
+			children = (
+				37D8D55A2F37A3660021F339 /* MockDataGenerator.swift */,
+			);
+			path = Mock;
+			sourceTree = "<group>";
+		};
+		37D8D5532F37A2E70021F339 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				37D8D5592F37A33E0021F339 /* PumpEvent.swift */,
+				37D8D5582F37A3280021F339 /* GlucosePoint.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		37D8D5552F37A2E70021F339 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				37D8D5542F37A2E70021F339 /* ContentView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -119,6 +180,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37D8D5562F37A2E70021F339 /* ContentView.swift in Sources */,
+				37D8D55F2F37A4490021F339 /* MockDataGenerator.swift in Sources */,
+				37D8D55D2F37A4380021F339 /* GlucosePoint.swift in Sources */,
+				37D8D55C2F37A3830021F339 /* AppModel.swift in Sources */,
+				37D8D5572F37A2E70021F339 /* Unity_PumpApp.swift in Sources */,
+				37D8D55E2F37A4400021F339 /* PumpEvent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
