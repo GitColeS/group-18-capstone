@@ -45,7 +45,7 @@ struct DashboardView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    Text("\(model.currentGlucoseMgdl) mg/dL")
+                    Text(model.displayGlucoseString(Double(model.currentGlucoseMgdl)))
                         .font(.system(size: 44, weight: .bold, design: .rounded))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,7 +60,7 @@ struct DashboardView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    GlucoseChartView(points: last60Min)
+                    GlucoseChartView(points: last60Min, unit: model.glucoseUnit)
                         .frame(height: 220)
                 }
                 .padding()

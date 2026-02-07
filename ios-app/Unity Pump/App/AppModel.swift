@@ -20,6 +20,13 @@ enum DoseType: String {
     case manual = "Manual"
 }
 
+enum GlucoseUnit: String, CaseIterable, Identifiable {
+    case mgdl = "mg/dL"
+    case mmoll = "mmol/L"
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
 
@@ -28,6 +35,7 @@ final class AppModel: ObservableObject {
 
     @Published var currentGlucoseMgdl: Int = 110
     @Published var glucoseHistory: [GlucosePoint] = []
+    @Published var glucoseUnit: GlucoseUnit = .mgdl // store glucose unit
 
     // Pump
     @Published var pumpState: PumpState = .idle
@@ -60,6 +68,26 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // Always store internally as mg/dL
+    func displayGlucose(_ mgdl: Double) -> Double {
+        switch glucoseUnit {
+        case .mgdl:
+            return mgdl
+        case .mmoll:
+            return mgdl / 18.0
+        }
+    }
+    
+    func displayGlucoseString(_ mgdl: Double) -> String {
+        switch glucoseUnit {
+        case .mgdl:
+            return "\(Int(mgdl.rounded())) mg/dL"
+        case .mmoll:
+            return String(format: "%.1f mmol/L", mgdl / 18.0)
+        }
+    }
+    
+    
     private func seedHistory() {
         let now = Date()
         var points: [GlucosePoint] = []

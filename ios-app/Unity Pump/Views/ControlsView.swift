@@ -46,6 +46,19 @@ struct ControlsView: View {
                     Text("Settings")
                         .font(.headline)
 
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Glucose Units")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Picker("Glucose Unit", selection: $model.glucoseUnit) {
+                            ForEach(GlucoseUnit.allCases) { unit in
+                                Text(unit.rawValue).tag(unit)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    
                     HStack {
                         Text("I:C Ratio")
                         Spacer()
