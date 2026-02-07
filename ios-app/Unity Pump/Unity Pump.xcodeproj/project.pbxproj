@@ -13,6 +13,9 @@
 		37D8D55D2F37A4380021F339 /* GlucosePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5582F37A3280021F339 /* GlucosePoint.swift */; };
 		37D8D55E2F37A4400021F339 /* PumpEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5592F37A33E0021F339 /* PumpEvent.swift */; };
 		37D8D55F2F37A4490021F339 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D55A2F37A3660021F339 /* MockDataGenerator.swift */; };
+		37D8D5612F37B3530021F339 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5602F37B34B0021F339 /* DashboardView.swift */; };
+		37D8D5632F37B3660021F339 /* ControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5622F37B3620021F339 /* ControlsView.swift */; };
+		37D8D5652F37BB720021F339 /* GlucoseChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D8D5642F37BB5F0021F339 /* GlucoseChartView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +26,9 @@
 		37D8D5592F37A33E0021F339 /* PumpEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpEvent.swift; sourceTree = "<group>"; };
 		37D8D55A2F37A3660021F339 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
 		37D8D55B2F37A37E0021F339 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		37D8D5602F37B34B0021F339 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		37D8D5622F37B3620021F339 /* ControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlsView.swift; sourceTree = "<group>"; };
+		37D8D5642F37BB5F0021F339 /* GlucoseChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseChartView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -77,6 +83,7 @@
 		37D8D5512F37A2E70021F339 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				37D8D5642F37BB5F0021F339 /* GlucoseChartView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -101,6 +108,8 @@
 		37D8D5552F37A2E70021F339 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				37D8D5622F37B3620021F339 /* ControlsView.swift */,
+				37D8D5602F37B34B0021F339 /* DashboardView.swift */,
 				37D8D5542F37A2E70021F339 /* ContentView.swift */,
 			);
 			path = Views;
@@ -180,9 +189,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37D8D5652F37BB720021F339 /* GlucoseChartView.swift in Sources */,
 				37D8D5562F37A2E70021F339 /* ContentView.swift in Sources */,
 				37D8D55F2F37A4490021F339 /* MockDataGenerator.swift in Sources */,
 				37D8D55D2F37A4380021F339 /* GlucosePoint.swift in Sources */,
+				37D8D5612F37B3530021F339 /* DashboardView.swift in Sources */,
+				37D8D5632F37B3660021F339 /* ControlsView.swift in Sources */,
 				37D8D55C2F37A3830021F339 /* AppModel.swift in Sources */,
 				37D8D5572F37A2E70021F339 /* Unity_PumpApp.swift in Sources */,
 				37D8D55E2F37A4400021F339 /* PumpEvent.swift in Sources */,

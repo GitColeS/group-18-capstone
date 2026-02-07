@@ -9,16 +9,21 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            NavigationStack {
+                DashboardView()
+            }
+            .tabItem {
+                Label("Dashboard", systemImage: "waveform.path.ecg")
+            }
+
+            NavigationStack {
+                ControlsView()
+            }
+            .tabItem {
+                Label("Controls", systemImage: "slider.horizontal.3")
+            }
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
-}
