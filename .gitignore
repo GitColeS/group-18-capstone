@@ -291,3 +291,11 @@ fastlane/*.env
 # https://github.com/johnno1962/injectionforxcode
 
 iOSInjectionProject/
+
+# macOS
+.DS_Store
+
+
+# Xcode user-specific
+*.xcuserstate
+**/xcuserdata/
