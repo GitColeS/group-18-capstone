@@ -10,6 +10,7 @@ import SwiftUI
 struct ControlsView: View {
     @EnvironmentObject var model: AppModel
     @State private var carbsText = ""
+    @FocusState private var keyboardFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -23,14 +24,47 @@ struct ControlsView: View {
                     HStack {
                         TextField("Carbs (g)", text: $carbsText)
                             .keyboardType(.numberPad)
+                            .focused($keyboardFocused)
                             .textFieldStyle(.roundedBorder)
 
                         Button("Send") {
                             let grams = Int(carbsText) ?? 0
                             model.sendCarbs(grams)
                             carbsText = ""
+                            keyboardFocused = false
                         }
                         .buttonStyle(.borderedProminent)
+                    }
+                }
+                .padding()
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.quaternary, lineWidth: 1))
+                
+                // Settings (MVP: read-only)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Settings")
+                        .font(.headline)
+
+                    HStack {
+                        Text("I:C Ratio")
+                        Spacer()
+                        Text("\(String(format: "%.1f", model.icRatio)) g/U")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Text("Correction Factor")
+                        Spacer()
+                        Text("\(String(format: "%.0f", model.correctionFactor)) mg/dL per U")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Text("Target")
+                        Spacer()
+                        Text("\(String(format: "%.0f", model.targetGlucose)) mg/dL")
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding()
@@ -68,6 +102,15 @@ struct ControlsView: View {
             }
             .padding()
         }
+        .onTapGesture {
+            keyboardFocused = false
+        }
         .navigationTitle("Controls")
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { keyboardFocused = false }
+            }
+        }
     }
 }

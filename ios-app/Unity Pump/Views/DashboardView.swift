@@ -76,9 +76,9 @@ struct DashboardView: View {
                         .foregroundStyle(.secondary)
 
                     HStack {
-                        Text("Status")
+                        Text("State")
                         Spacer()
-                        Text(model.pumpStatusText)
+                        Text(model.pumpState.rawValue)
                             .foregroundStyle(.secondary)
                     }
 
@@ -88,11 +88,19 @@ struct DashboardView: View {
                         Text("\(String(format: "%.1f", model.lastDoseUnits)) U at \(model.lastDoseTime, style: .time)")
                             .foregroundStyle(.secondary)
                     }
+
+                    HStack {
+                        Text("Last command")
+                        Spacer()
+                        Text(model.lastCommandText)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .padding()
                 .background(.background)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(.quaternary, lineWidth: 1))
+
             }
             .padding()
         }

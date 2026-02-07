@@ -9,6 +9,17 @@ import SwiftUI
 import Foundation
 import Combine
 
+enum PumpState: String {
+    case idle = "Idle"
+    case delivering = "Delivering"
+    case error = "Error"
+}
+
+enum DoseType: String {
+    case auto = "Auto"
+    case manual = "Manual"
+}
+
 @MainActor
 final class AppModel: ObservableObject {
 
@@ -18,11 +29,19 @@ final class AppModel: ObservableObject {
     @Published var currentGlucoseMgdl: Int = 110
     @Published var glucoseHistory: [GlucosePoint] = []
 
-    @Published var pumpStatusText: String = "Idle"
+    // Pump
+    @Published var pumpState: PumpState = .idle
     @Published var lastDoseUnits: Double = 0.0
     @Published var lastDoseTime: Date = Date()
+    @Published var lastDoseType: DoseType = .auto
+    @Published var lastCommandText: String = "—"
 
     @Published var events: [PumpEvent] = []
+    
+    // Settings (MVP)
+    @Published var icRatio: Double = 10.0              // g/U
+    @Published var correctionFactor: Double = 50.0     // mg/dL per U
+    @Published var targetGlucose: Double = 110.0       // mg/dL
 
     private let generator = MockDataGenerator()
     private var timer: Timer?
@@ -78,17 +97,21 @@ final class AppModel: ObservableObject {
         events.insert(PumpEvent(time: now, type: .carbs,
                                 message: "Carbs sent: \(grams) g"), at: 0)
 
-        // Demo: simulate a dose response
-        let simulatedDose = Double(grams) / 10.0
+        // Mock “auto” dose logic (demo only)
+        let simulatedDose = Double(grams) / icRatio
         lastDoseUnits = (simulatedDose * 10).rounded() / 10
         lastDoseTime = now
-        pumpStatusText = "Delivered"
+        lastDoseType = .auto
+        lastCommandText = "\(String(format: "%.1f", lastDoseUnits)) U (\(lastDoseType.rawValue))"
 
+        pumpState = .delivering
         events.insert(PumpEvent(time: now, type: .dose,
-                                message: "Dose delivered: \(String(format: "%.1f", lastDoseUnits)) U"), at: 0)
+                                message: "Commanded dose: \(lastCommandText)"), at: 0)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            self.pumpStatusText = "Idle"
+            self.pumpState = .idle
+            self.events.insert(PumpEvent(time: Date(), type: .dose,
+                                         message: "Delivery complete: \(String(format: "%.1f", self.lastDoseUnits)) U"), at: 0)
         }
     }
 }
