@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import requests
 
 from simglucose.simulation.env import T1DSimEnv
 from simglucose.patient.t1dpatient import T1DPatient
@@ -23,6 +24,18 @@ obs = env.reset()
 print("Simulator started")
 print("Each step = 5 minutes of simulated time\n")
 
+
+ESP_IP = "192.168.0.243"
+
+def get_insulin(cgm):
+
+    r = requests.get(
+        f"http://{ESP_IP}/cgm",
+        params={"glucose": cgm}
+    )
+    print(f"Insulin: {r.text}")
+    return float(r.text)
+
 step = 0
 
 while True:
@@ -31,7 +44,7 @@ while True:
     print("CGM:", round(cgm,2), "mg/dL")
 
     carbs = float(input("Carbs (grams): "))
-    insulin = float(input("Basal insulin (U/min): "))
+    insulin = get_insulin(cgm)
 
     # inject meal
     if carbs > 0:
