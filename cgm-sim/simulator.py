@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 import requests
 
 from simglucose.simulation.env import T1DSimEnv
@@ -7,7 +8,6 @@ from simglucose.sensor.cgm import CGMSensor
 from simglucose.actuator.pump import InsulinPump
 from simglucose.simulation.scenario import CustomScenario
 from simglucose.controller.base import Action
-
 
 patient = T1DPatient.withName("adult#001")
 sensor = CGMSensor.withName("Dexcom")
@@ -24,32 +24,40 @@ obs = env.reset()
 print("Simulator started")
 print("Each step = 5 minutes of simulated time\n")
 
-
 ESP_IP = "192.168.0.243"
 
-def get_insulin(cgm):
+
+def get_control(glucose):
 
     r = requests.get(
         f"http://{ESP_IP}/cgm",
-        params={"glucose": cgm}
+        params={"glucose": glucose}
     )
-    print(f"Insulin: {r.text}")
-    return float(r.text)
+
+    data = r.json()
+
+    insulin = float(data["insulin"])
+    carbs = float(data["carbs"])
+
+    print("ESP → insulin:", insulin, "carbs:", carbs)
+
+    return insulin, carbs
+
 
 step = 0
 
 while True:
 
     cgm = obs.observation.CGM
-    print("CGM:", round(cgm,2), "mg/dL")
+    print("CGM:", round(cgm, 2), "mg/dL")
 
-    carbs = float(input("Carbs (grams): "))
-    insulin = get_insulin(cgm)
+    insulin, carbs = get_control(cgm)
 
-    # inject meal
+    # inject meal if carbs received
     if carbs > 0:
-        meal_time = start_time + timedelta(minutes=step*5)
+        meal_time = start_time + timedelta(minutes=step * 5)
         scenario.scenario.append((meal_time, carbs))
+        print("Meal injected:", carbs, "g")
 
     action = Action(basal=insulin, bolus=0)
 
@@ -57,3 +65,4 @@ while True:
 
     step += 1
     print()
+    time.sleep(3)
