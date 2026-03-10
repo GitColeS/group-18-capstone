@@ -24,7 +24,7 @@ obs = env.reset()
 print("Simulator started")
 print("Each step = 5 minutes of simulated time\n")
 
-ESP_IP = "192.168.0.243"
+ESP_IP = "192.168.2.61"
 
 
 def get_control(glucose):

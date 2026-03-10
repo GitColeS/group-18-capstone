@@ -171,15 +171,18 @@ final class AppModel: NSObject, ObservableObject, CBCentralManagerDelegate, CBPe
                         didDiscover peripheral: CBPeripheral,
                         advertisementData: [String : Any],
                         rssi RSSI: NSNumber) {
-        if let name = peripheral.name, name.contains("ESP32-CGM") {
-            espPeripheral = peripheral
-            espPeripheral?.delegate = self
-            central.stopScan()
-            central.connect(peripheral, options: nil)
+        // iOS often gives peripheral.name == nil during scan; check advertisement data too
+        let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        let name = peripheral.name ?? advertisedName ?? ""
+        guard name.contains("ESP32-CGM") else { return }
 
-            events.insert(PumpEvent(time: Date(), type: .connection,
-                                    message: "Connecting to \(name)..."), at: 0)
-        }
+        espPeripheral = peripheral
+        espPeripheral?.delegate = self
+        central.stopScan()
+        central.connect(peripheral, options: nil)
+
+        events.insert(PumpEvent(time: Date(), type: .connection,
+                                message: "Connecting to \(name)..."), at: 0)
     }
 
     func centralManager(_ central: CBCentralManager,

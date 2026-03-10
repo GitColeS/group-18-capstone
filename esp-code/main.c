@@ -29,8 +29,8 @@
 
 static const char *TAG = "cgm_server";
 
-#define WIFI_SSID "275 Westside"
-#define WIFI_PASS "Mmproprentals2021!!"
+#define WIFI_SSID "The Crib 2.0"
+#define WIFI_PASS "21capecod"
 
 float pending_carbs = 0; // carb input from mobile
 static uint16_t current_conn_handle = BLE_HS_CONN_HANDLE_NONE;
