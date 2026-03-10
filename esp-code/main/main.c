@@ -10,6 +10,8 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "driver/gpio.h"
+
 #include "esp_netif.h"
 #include "esp_http_server.h"
 
@@ -33,6 +35,121 @@ static const char *TAG = "cgm_server";
 #define WIFI_PASS "Mmproprentals2021!!"
 
 float pending_carbs = 0; // carb input from mobile
+
+// ------- pump configuration -------
+
+// Pump control on GPIO 5.
+// On the current hardware, HIGH turns the pump ON and LOW turns it OFF.
+#define PUMP_GPIO        GPIO_NUM_5
+#define PUMP_ON_LEVEL    1
+#define PUMP_OFF_LEVEL   0
+
+// ------- closed-loop controller configuration -------
+
+// Glucose targets and safety limits (mg/dL)
+static const float TARGET_GLUCOSE_MGDL        = 110.0f;
+static const float LOW_GLUCOSE_CUTOFF_MGDL    = 80.0f;
+
+// Insulin parameters
+//  - Carb ratio: grams of carbs covered by 1 unit of insulin
+//  - Insulin sensitivity: mg/dL drop per 1 unit of insulin
+static const float CARB_RATIO_G_PER_U             = 10.0f;
+static const float INSULIN_SENSITIVITY_MGDL_PER_U = 50.0f;
+
+// Basal component approximated per control step.
+// For a demo, choose a small constant per-step dose.
+static const float BASAL_PER_STEP_U = 0.03f;
+
+// Safety: maximum insulin allowed per control step (units)
+static const float MAX_INSULIN_PER_STEP_U = 2.0f;
+
+// ------- minimal insulin-on-board (IOB) tracking -------
+
+// Number of recent steps to remember; if each step ~5 minutes,
+// 48 steps ~= 4 hours of history.
+#define IOB_HISTORY_STEPS 48
+
+// For a minimal model, treat only the most recent subset as "active".
+#define IOB_ACTIVE_STEPS 24
+
+static float recent_insulin[IOB_HISTORY_STEPS] = {0};
+static int recent_idx = 0;
+static int recent_count = 0;
+
+// Simple pump driver helpers
+static void pump_init(void)
+{
+    gpio_config_t io_conf = {
+        .pin_bit_mask = 1ULL << PUMP_GPIO,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+
+    // Start safe: pump OFF
+    gpio_set_level(PUMP_GPIO, PUMP_OFF_LEVEL);
+}
+
+// Very simple translation from insulin units to pump-on time.
+// Assumptions (tunable):
+//  - U100 insulin: 1 U ~= 0.01 mL
+//  - Pump flow ~ 4 mL/s at full ON
+// So 1 U ~= 2.5 ms of ON time.
+static void pump_deliver_insulin(float insulin_units)
+{
+    if (insulin_units <= 0.0f) {
+        return;
+    }
+
+    const float ML_PER_UNIT      = 0.01f;  // 100 U/mL
+    const float FLOW_ML_PER_SEC  = 4.0f;   // from prototype note
+
+    float volume_ml = insulin_units * ML_PER_UNIT;
+    float seconds   = volume_ml / FLOW_ML_PER_SEC;
+
+    // Constrain to a reasonable pulse window for safety and responsiveness.
+    if (seconds < 0.05f) {
+        seconds = 0.05f;
+    }
+    if (seconds > 2.0f) {
+        seconds = 2.0f;
+    }
+
+    uint32_t ms = (uint32_t)(seconds * 1000.0f);
+
+    gpio_set_level(PUMP_GPIO, PUMP_ON_LEVEL);
+    vTaskDelay(pdMS_TO_TICKS(ms));
+    gpio_set_level(PUMP_GPIO, PUMP_OFF_LEVEL);
+}
+
+static float compute_current_iob(void)
+{
+    float iob = 0.0f;
+
+    int steps_to_consider = recent_count < IOB_ACTIVE_STEPS ? recent_count : IOB_ACTIVE_STEPS;
+
+    for (int i = 0; i < steps_to_consider; i++) {
+        int idx = (recent_idx - 1 - i);
+        if (idx < 0) {
+            idx += IOB_HISTORY_STEPS;
+        }
+        iob += recent_insulin[idx];
+    }
+
+    return iob;
+}
+
+static void store_insulin_dose(float dose)
+{
+    recent_insulin[recent_idx] = dose;
+    recent_idx = (recent_idx + 1) % IOB_HISTORY_STEPS;
+    if (recent_count < IOB_HISTORY_STEPS) {
+        recent_count++;
+    }
+}
+
 static uint16_t current_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 
 void ble_app_on_sync(void);
@@ -171,17 +288,48 @@ void host_task(void *param)
     nimble_port_freertos_deinit();
 }
 
-// -------- insulin controller -------- (This is where the control algorithm would be implemented?)
+// -------- closed-loop insulin controller --------
 
-float compute_insulin(float glucose)
+float compute_insulin(float glucose, float carbs)
 {
-    float target = 110.0;
+    // Safety: if glucose is low, suppress insulin delivery.
+    if (glucose < LOW_GLUCOSE_CUTOFF_MGDL) {
+        float dose = 0.0f;
+        store_insulin_dose(dose);
+        return dose;
+    }
 
-    float insulin = 0.002 * (glucose - target);
+    float insulin = 0.0f;
 
-    if(insulin < 0) insulin = 0;
-    if(insulin > 0.05) insulin = 0.05;
+    // Basal component per control step.
+    insulin += BASAL_PER_STEP_U;
 
+    // Meal bolus: carbs announced this step.
+    if (carbs > 0.0f) {
+        float meal_bolus = carbs / CARB_RATIO_G_PER_U;
+        insulin += meal_bolus;
+    }
+
+    // Correction bolus based on deviation from target.
+    float delta = glucose - TARGET_GLUCOSE_MGDL;
+    if (delta > 0.0f) {
+        float correction = delta / INSULIN_SENSITIVITY_MGDL_PER_U;
+        insulin += correction;
+    }
+
+    // Subtract a simple estimate of insulin-on-board to reduce stacking.
+    float current_iob = compute_current_iob();
+    insulin -= current_iob;
+
+    if (insulin < 0.0f) {
+        insulin = 0.0f;
+    }
+
+    if (insulin > MAX_INSULIN_PER_STEP_U) {
+        insulin = MAX_INSULIN_PER_STEP_U;
+    }
+
+    store_insulin_dose(insulin);
     return insulin;
 }
 
@@ -227,8 +375,12 @@ esp_err_t cgm_handler(httpd_req_t *req)
     // reset carbs immediately
     pending_carbs = 0;
 
-    // compute insulin
-    float insulin = compute_insulin(glucose);
+    // compute insulin using closed-loop controller
+    float insulin = compute_insulin(glucose, carbs);
+
+    // Drive the physical pump whenever insulin is commanded.
+    // Fractions of a second response are acceptable for this prototype.
+    pump_deliver_insulin(insulin);
     ESP_LOGI(TAG, "Glucose: %.2f | Carbs used: %.1f | Insulin: %.3f",
          glucose, carbs, insulin);
 
@@ -312,6 +464,8 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    pump_init();
 
     ret = nimble_port_init();
     ESP_ERROR_CHECK(ret);
