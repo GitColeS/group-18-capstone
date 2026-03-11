@@ -44,33 +44,38 @@ float pending_carbs = 0; // carb input from mobile
 #define PUMP_ON_LEVEL    1
 #define PUMP_OFF_LEVEL   0
 
-// ------- closed-loop controller configuration -------
+// ------- improved closed-loop controller configuration -------
 
 // Glucose targets and safety limits (mg/dL)
-static const float TARGET_GLUCOSE_MGDL        = 110.0f;
-static const float LOW_GLUCOSE_CUTOFF_MGDL    = 80.0f;
+//static const float TARGET_GLUCOSE_MGDL           = 110.0f;
+static const float LOW_GLUCOSE_CUTOFF_MGDL       = 80.0f;
+static const float CORRECTION_START_MGDL         = 155.0f;
+static const float TREND_SUSPEND_GLUCOSE_MGDL    = 100.0f;
+static const float STRONG_SUSPEND_GLUCOSE_MGDL   = 90.0f;
 
 // Insulin parameters
-//  - Carb ratio: grams of carbs covered by 1 unit of insulin
-//  - Insulin sensitivity: mg/dL drop per 1 unit of insulin
 static const float CARB_RATIO_G_PER_U             = 10.0f;
-static const float INSULIN_SENSITIVITY_MGDL_PER_U = 50.0f;
+static const float INSULIN_SENSITIVITY_MGDL_PER_U = 80.0f;
 
-// Basal component approximated per control step.
-// For a demo, choose a small constant per-step dose.
-static const float BASAL_PER_STEP_U = 0.03f;
+// Basal per 5-minute control step
+static const float BASAL_PER_STEP_U = 0.02f;
 
-// Safety: maximum insulin allowed per control step (units)
-static const float MAX_INSULIN_PER_STEP_U = 2.0f;
+// Safety limits
+static const float MAX_INSULIN_PER_STEP_U      = 1.0f;   // reduced from 2.0
+static const float MAX_MEAL_PORTION_PER_STEP_U = 0.75f;  // meal spread limit
+static const float CORRECTION_GAIN             = 0.5f;   // softer correction
 
-// ------- minimal insulin-on-board (IOB) tracking -------
+// Meal insulin spreading
+static float pending_meal_insulin_u = 0.0f;
 
-// Number of recent steps to remember; if each step ~5 minutes,
-// 48 steps ~= 4 hours of history.
+// Trend tracking
+static bool have_prev_glucose = false;
+static float prev_glucose_mgdl = 0.0f;
+
+// ------- improved insulin-on-board tracking -------
+
+// 48 steps = 4 hours if each step is 5 minutes
 #define IOB_HISTORY_STEPS 48
-
-// For a minimal model, treat only the most recent subset as "active".
-#define IOB_ACTIVE_STEPS 24
 
 static float recent_insulin[IOB_HISTORY_STEPS] = {0};
 static int recent_idx = 0;
@@ -128,14 +133,21 @@ static float compute_current_iob(void)
 {
     float iob = 0.0f;
 
-    int steps_to_consider = recent_count < IOB_ACTIVE_STEPS ? recent_count : IOB_ACTIVE_STEPS;
+    int steps_to_consider = recent_count < IOB_HISTORY_STEPS ? recent_count : IOB_HISTORY_STEPS;
 
-    for (int i = 0; i < steps_to_consider; i++) {
-        int idx = (recent_idx - 1 - i);
+    for (int age = 0; age < steps_to_consider; age++) {
+        int idx = recent_idx - 1 - age;
         if (idx < 0) {
             idx += IOB_HISTORY_STEPS;
         }
-        iob += recent_insulin[idx];
+
+        // Linear decay: newest dose weight ~1.0, oldest dose weight -> 0.0
+        float weight = 1.0f - ((float)age / (float)IOB_HISTORY_STEPS);
+        if (weight < 0.0f) {
+            weight = 0.0f;
+        }
+
+        iob += recent_insulin[idx] * weight;
     }
 
     return iob;
@@ -292,35 +304,67 @@ void host_task(void *param)
 
 float compute_insulin(float glucose, float carbs)
 {
-    // Safety: if glucose is low, suppress insulin delivery.
+    float trend = 0.0f;
+    if (have_prev_glucose) {
+        trend = glucose - prev_glucose_mgdl;   // mg/dL per 5-minute step
+    }
+
+    // If new carbs are announced, convert to meal insulin and add to queue
+    if (carbs > 0.0f) {
+        pending_meal_insulin_u += carbs / CARB_RATIO_G_PER_U;
+    }
+
+    // Hard low-glucose safety stop
     if (glucose < LOW_GLUCOSE_CUTOFF_MGDL) {
-        float dose = 0.0f;
-        store_insulin_dose(dose);
-        return dose;
+        prev_glucose_mgdl = glucose;
+        have_prev_glucose = true;
+        store_insulin_dose(0.0f);
+        return 0.0f;
     }
 
     float insulin = 0.0f;
 
-    // Basal component per control step.
+    // Basal delivery
     insulin += BASAL_PER_STEP_U;
 
-    // Meal bolus: carbs announced this step.
-    if (carbs > 0.0f) {
-        float meal_bolus = carbs / CARB_RATIO_G_PER_U;
-        insulin += meal_bolus;
+    // Deliver meal insulin gradually over multiple steps
+    float meal_portion = 0.0f;
+    if (pending_meal_insulin_u > 0.0f) {
+        meal_portion = pending_meal_insulin_u;
+        if (meal_portion > MAX_MEAL_PORTION_PER_STEP_U) {
+            meal_portion = MAX_MEAL_PORTION_PER_STEP_U;
+        }
+        insulin += meal_portion;
     }
 
-    // Correction bolus based on deviation from target.
-    float delta = glucose - TARGET_GLUCOSE_MGDL;
-    if (delta > 0.0f) {
-        float correction = delta / INSULIN_SENSITIVITY_MGDL_PER_U;
+    // More conservative correction: only start above correction threshold
+    float correction = 0.0f;
+    if (glucose > CORRECTION_START_MGDL) {
+        correction = CORRECTION_GAIN *
+                     ((glucose - CORRECTION_START_MGDL) / INSULIN_SENSITIVITY_MGDL_PER_U);
+        if (correction < 0.0f) {
+            correction = 0.0f;
+        }
         insulin += correction;
     }
 
-    // Subtract a simple estimate of insulin-on-board to reduce stacking.
-    float current_iob = compute_current_iob();
-    insulin -= current_iob;
+    // Trend-based safety reduction
+    // If glucose is already falling and is near the lower range, reduce insulin
+    if (have_prev_glucose) {
+        if (glucose < TREND_SUSPEND_GLUCOSE_MGDL && trend < -2.0f) {
+            insulin *= 0.5f;
+        }
 
+        if (glucose < STRONG_SUSPEND_GLUCOSE_MGDL && trend < -1.0f) {
+            insulin = 0.0f;
+        }
+    }
+
+    // Subtract decaying IOB to reduce stacking
+    float current_iob = compute_current_iob();
+    insulin -= 0.6f * current_iob;   // partial subtraction works better than full subtraction
+
+    // Clamp
     if (insulin < 0.0f) {
         insulin = 0.0f;
     }
@@ -329,7 +373,28 @@ float compute_insulin(float glucose, float carbs)
         insulin = MAX_INSULIN_PER_STEP_U;
     }
 
+    // Only subtract from pending meal insulin what was actually delivered
+    float delivered_for_meal = insulin - BASAL_PER_STEP_U - correction;
+    if (delivered_for_meal < 0.0f) {
+        delivered_for_meal = 0.0f;
+    }
+    if (delivered_for_meal > pending_meal_insulin_u) {
+        delivered_for_meal = pending_meal_insulin_u;
+    }
+    pending_meal_insulin_u -= delivered_for_meal;
+    if (pending_meal_insulin_u < 0.0f) {
+        pending_meal_insulin_u = 0.0f;
+    }
+
+    // Store and update trend state
     store_insulin_dose(insulin);
+    prev_glucose_mgdl = glucose;
+    have_prev_glucose = true;
+
+    ESP_LOGI(TAG,
+             "Controller | G=%.1f trend=%.1f carbs=%.1f meal_pending=%.2f corr=%.2f IOB=%.2f -> insulin=%.3f",
+             glucose, trend, carbs, pending_meal_insulin_u, correction, current_iob, insulin);
+
     return insulin;
 }
 
