@@ -41,8 +41,8 @@ float pending_carbs = 0; // carb input from mobile
 // Pump control on GPIO 5.
 // On the current hardware, HIGH turns the pump ON and LOW turns it OFF.
 #define PUMP_GPIO        GPIO_NUM_5
-#define PUMP_ON_LEVEL    1
-#define PUMP_OFF_LEVEL   0
+#define PUMP_ON_LEVEL    0
+#define PUMP_OFF_LEVEL   1
 
 // ------- improved closed-loop controller configuration -------
 
@@ -112,11 +112,11 @@ static void pump_deliver_insulin(float insulin_units)
     const float FLOW_ML_PER_SEC  = 4.0f;   // from prototype note
 
     float volume_ml = insulin_units * ML_PER_UNIT;
-    float seconds   = volume_ml / FLOW_ML_PER_SEC;
+    float seconds   = volume_ml / FLOW_ML_PER_SEC * 100;
 
     // Constrain to a reasonable pulse window for safety and responsiveness.
-    if (seconds < 0.05f) {
-        seconds = 0.05f;
+    if (seconds < 0.3f) {
+        seconds = 0.3f;
     }
     if (seconds > 2.0f) {
         seconds = 2.0f;
