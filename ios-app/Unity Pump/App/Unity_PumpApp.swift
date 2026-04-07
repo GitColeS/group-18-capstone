@@ -16,7 +16,11 @@ struct Unity_PumpApp: App {
             ContentView()
                 .environmentObject(model)
                 .onAppear {
+                    #if targetEnvironment(simulator)
                     model.startMocking()
+                    #else
+                    model.startBluetooth()
+                    #endif
                 }
         }
     }
